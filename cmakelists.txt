@@ -1,0 +1,48 @@
+cmake_minimum_required(VERSION 3.20)
+project(LCTFit)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Recursively get all .cpp, .h, and .hpp files in third_party
+file(GLOB THIRD_PARTY_SOURCES third_party/*.cpp third_party/*.c)
+file(GLOB THIRD_PARTY_HEADERS third_party/*.h third_party/*.hpp)
+
+# Your own project's source/header files (non-recursive or recursive as needed)
+file(GLOB SOURCES *.cpp)
+file(GLOB HEADERS *.h *.hpp)
+
+# Combine everything
+set(ALL_SOURCES ${SOURCES} ${HEADERS} ${THIRD_PARTY_SOURCES} ${THIRD_PARTY_HEADERS})
+
+# Create the executable
+add_executable(${PROJECT_NAME} ${ALL_SOURCES})
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
+
+find_package(Vulkan REQUIRED)
+target_include_directories(${PROJECT_NAME} PRIVATE ${Vulkan_INCLUDE_DIRS})
+
+# Include the include/ directory
+# target_include_directories(${PROJECT_NAME} PRIVATE include)
+
+set(OUT_IMAGE_DIR "${CMAKE_CURRENT_BINARY_DIR}/out_images")
+file(MAKE_DIRECTORY "${OUT_IMAGE_DIR}")
+# optional: pass to code
+target_compile_definitions(${PROJECT_NAME} PRIVATE OUT_IMAGE_DIR=\"${OUT_IMAGE_DIR}\")
+
+set(OUT_DATA_DIR "${CMAKE_CURRENT_BINARY_DIR}/out_data")
+file(MAKE_DIRECTORY "${OUT_DATA_DIR}")
+# optional: pass to code
+target_compile_definitions(${PROJECT_NAME} PRIVATE OUT_DATA_DIR=\"${OUT_DATA_DIR}\")
+
+
+# set tinyexr path
+#set(TINYEXR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../tinyexr")
+#message(STATUS "TINYEXR_PATH = ${TINYEXR_PATH}")
+#target_include_directories(${PROJECT_NAME} PUBLIC ${TINYEXR_PATH})
+#
+## set miniz path, required by tinyexr
+#set(MINIZ_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../miniz")
+#message(STATUS "MINIZ_PATH = ${MINIZ_PATH}")
+#target_include_directories(${PROJECT_NAME} PUBLIC ${MINIZ_PATH})
