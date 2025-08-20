@@ -6,7 +6,7 @@
 int LUT::write_to_exr(const std::string& name) {
     const char* err = nullptr;
 
-    int ret = SaveEXR(reinterpret_cast<const float*>(image.data()),
+    int ret = SaveEXR(reinterpret_cast<const float*>(tab.data()),
         static_cast<int>(width), static_cast<int>(height), 4/*rgba*/, 0, name.c_str(), &err);
 
     if (ret != TINYEXR_SUCCESS) {

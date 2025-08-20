@@ -90,52 +90,67 @@ def add_pole_axis(plotter, center, length=2.5, color="red"):
     plotter.add_mesh(line, color=color, line_width=3)
 
 def main():
-    if len(sys.argv) != 3:
-        print(f"Usage: {sys.argv[0]} datafile1 datafile2")
+    if len(sys.argv) < 2 or len(sys.argv) > 3:
+        print(f"Usage: {sys.argv[0]} datafile1 [datafile2]")
         sys.exit(1)
 
-    file1, file2 = sys.argv[1], sys.argv[2]
-
+    file1 = sys.argv[1]
     data1 = load_data(file1)
-    data2 = load_data(file2)
-
     sphere1 = make_colored_sphere(data1)
-    sphere2 = make_colored_sphere(data2)
 
-    # Translate spheres apart in X-axis
-    sphere1.translate([-1.5, 0, 0], inplace=True)
-    sphere2.translate([ 1.5, 0, 0], inplace=True)
-
-    # Plot both spheres
     plotter = pv.Plotter()
-    plotter.add_mesh(sphere1, scalars="values", cmap="viridis", show_scalar_bar=True)
-    plotter.add_mesh(sphere2, scalars="values", cmap="viridis", show_scalar_bar=True)
-    
-    # Add transparent ground plane at z=0
+
+    if len(sys.argv) == 3:
+        file2 = sys.argv[2]
+        data2 = load_data(file2)
+        sphere2 = make_colored_sphere(data2)
+
+        # Translate apart
+        sphere1.translate([0, -1.5, 0], inplace=True)
+        sphere2.translate([0,  1.5, 0], inplace=True)
+
+        plotter.add_mesh(sphere1, scalars="values", cmap="viridis", show_scalar_bar=True)
+        plotter.add_mesh(sphere2, scalars="values", cmap="viridis", show_scalar_bar=True)
+
+        # Labels
+        label_points = np.array([
+            [0, -1.5, 1.7],
+            [0,  1.5, 1.7],
+        ])
+        labels = [file1, file2]
+    else:
+        # Only one sphere, centered
+        plotter.add_mesh(sphere1, scalars="values", cmap="viridis", show_scalar_bar=True)
+
+        label_points = np.array([[0, 0, 1.7]])
+        labels = [file1]
+
+    # Transparent ground plane
     plane = pv.Plane(center=(0, 0, 0), direction=(0, 0, 1), i_size=6, j_size=6)
     plotter.add_mesh(plane, color='lightgray', opacity=0.3)
 
-    # Add pole axis lines
-    add_pole_axis(plotter, [-1.5, 0, 0])
-    add_pole_axis(plotter, [ 1.5, 0, 0])
+    # Add pole axis
+    if len(sys.argv) == 3:
+        add_pole_axis(plotter, [0, -1.5, 0])
+        add_pole_axis(plotter, [0,  1.5, 0])
+    else:
+        add_pole_axis(plotter, [0, 0, 0])
 
     plotter.add_axes()
-    plotter.camera_position = [(-10, -10, 10), (0, 0, 0), (0, 0, 1)]
+    plotter.camera_position = [(-10, 0, 5), (0, 0, 0), (0, 0, 1)]
 
-    # orthogonal camera
+    # Orthogonal camera
     plotter.camera.parallel_projection = True
     bottom, top = -2.0, 2.0
     plotter.camera.SetParallelScale((top - bottom) / 2)
 
-    # Add data file name labels above spheres
-    label_points = np.array([
-        [-1.5, 0, 1.7],
-        [ 1.5, 0, 1.7],
-    ])
-    labels = [file1, file2]
-
-    plotter.add_point_labels(label_points, labels, font_size=14, text_color='#00FF00',
-                         point_color='#00FF00', shape=None, always_visible=True)
+    # Labels
+    plotter.add_point_labels(
+        label_points, labels,
+        font_size=14, text_color='#00FF00',
+        point_color='#00FF00', shape=None,
+        always_visible=True
+    )
 
     plotter.show()
 

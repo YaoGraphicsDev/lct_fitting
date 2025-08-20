@@ -67,8 +67,8 @@ public:
 	inline glm::vec3 sample(glm::vec2 u, glm::vec3 v) {
 		assert(alpha_x == alpha_y); // isotropic for the moment
 		float alpha = alpha_x;
-		float phi = glm::two_pi<float>() * u.x;
-		float r = alpha * sqrtf(u.y / (1.0f - u.y));
+		float r = alpha * sqrtf(u.x / (1.0f - u.x));
+		float phi = glm::two_pi<float>() * u.y;
 		glm::vec3 m = glm::normalize(glm::vec3(r * glm::cos(phi), r * glm::sin(phi), 1.0f));
 		glm::vec3 l = glm::reflect(-v, m);
 		return glm::normalize(l);
@@ -153,8 +153,13 @@ public:
 		return sum;
 	}
 
-	float albedo_2(glm::vec3 v, int n = 64) {
+	struct AlbedoContext {
+		float albedo;
+		glm::vec3 l_avg;
+	};
+	AlbedoContext albedo_2(glm::vec3 v, int n = 64) {
 		float sum = 0.0f;
+		glm::vec3 dir(0.0f);
 
 		for (int i = 0; i < n; ++i) {
 			for (int j = 0; j < n; ++j) {
@@ -168,22 +173,26 @@ public:
 
 				EvalResult e_result = eval(v, s_result.l);
 
-				if (e_result.brdfxcos_l < 0.0f) {
-					int a = 0;
-				}
-				if (e_result.pdf < 0.0f) {
-					int a = 0;
-				}
-				
-
 				// accumulate
 				assert(e_result.pdf > 0.0f);
 				assert(e_result.brdfxcos_l >= 0.0f);
+
 				sum += e_result.brdfxcos_l / e_result.pdf;
+				dir += e_result.brdfxcos_l * s_result.l / e_result.pdf;
 			}
 		}
 
-		return sum / (float)(n * n);
+		// keep l in the same plane as v and +z
+		glm::vec3 n_vz = glm::cross(v, glm::vec3(0.0f, 0.0f, 1.0f));
+		if (glm::length(n_vz) < 0.0001) {
+			dir = glm::vec3(0.0f, 0.0f, 1.0f);
+		}
+		else {
+			n_vz = glm::normalize(n_vz);
+			dir = dir - glm::dot(n_vz, dir) * n_vz;
+		}
+		
+		return { sum / (float)(n * n), glm::normalize(dir) };
 	}
 
 	GGXDistribution ggx;

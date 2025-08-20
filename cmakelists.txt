@@ -18,23 +18,25 @@ set(ALL_SOURCES ${SOURCES} ${HEADERS} ${THIRD_PARTY_SOURCES} ${THIRD_PARTY_HEADE
 # Create the executable
 add_executable(${PROJECT_NAME} ${ALL_SOURCES})
 
+# third party
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
+# Vulkan
 find_package(Vulkan REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE ${Vulkan_INCLUDE_DIRS})
 
-# Include the include/ directory
-# target_include_directories(${PROJECT_NAME} PRIVATE include)
+# CLI11
+set(CLI11_PATH "" CACHE PATH "Path to the directory containing CLI11.hpp")
+if(NOT CLI11_PATH)
+    message(FATAL_ERROR "CLI11_PATH not set.")
+endif()
+message(STATUS "Using CLI11.hpp.h path: ${CLI11_PATH}")
+target_include_directories(${PROJECT_NAME} PRIVATE ${CLI11_PATH})
 
-set(OUT_IMAGE_DIR "${CMAKE_CURRENT_BINARY_DIR}/out_images")
-file(MAKE_DIRECTORY "${OUT_IMAGE_DIR}")
+set(OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/out")
+file(MAKE_DIRECTORY "${OUT_DIR}")
 # optional: pass to code
-target_compile_definitions(${PROJECT_NAME} PRIVATE OUT_IMAGE_DIR=\"${OUT_IMAGE_DIR}\")
-
-set(OUT_DATA_DIR "${CMAKE_CURRENT_BINARY_DIR}/out_data")
-file(MAKE_DIRECTORY "${OUT_DATA_DIR}")
-# optional: pass to code
-target_compile_definitions(${PROJECT_NAME} PRIVATE OUT_DATA_DIR=\"${OUT_DATA_DIR}\")
+target_compile_definitions(${PROJECT_NAME} PRIVATE OUT_DIR=\"${OUT_DIR}\")
 
 
 # set tinyexr path

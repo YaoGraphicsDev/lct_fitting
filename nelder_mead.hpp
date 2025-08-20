@@ -12,11 +12,11 @@
 template<int DIM>
 struct NelderMead{
 
-	using VecN = Vector<DIM>;
+	using VecN = Vector<float, DIM>;
 	static constexpr int SimplexSize = DIM + 1;
 	struct Vertex {
 		VecN x;
-		float f;
+		double f;
 	};
 	using Simplex = std::array<Vertex, SimplexSize>;
 
@@ -36,7 +36,7 @@ struct NelderMead{
 		return c;
 	}
 
-	static void shrink(typename  Simplex::iterator begin, typename  Simplex::iterator end, const VecN& x_o, std::function<float(const VecN&)> obj_func) {
+	static void shrink(typename  Simplex::iterator begin, typename  Simplex::iterator end, const VecN& x_o, std::function<double(const VecN&)> obj_func) {
 		for (Simplex::iterator iter = begin; iter < end; ++iter) {
 			iter->x = VecN::lerp(iter->x, x_o, 0.5f);
 			iter->f = obj_func(iter->x);
@@ -51,7 +51,7 @@ struct NelderMead{
 	};
 
 	static Opti optimize(
-		std::function<float(VecN)> obj_func,
+		std::function<double(VecN)> obj_func,
 		VecN start_x,
 		float delta,
 		float tolerance,
@@ -75,6 +75,10 @@ struct NelderMead{
 		int iter = 0;
 		VecN x_opt;
 		for (iter = 0; iter < max_iter; ++iter) {
+			if (iter == max_iter - 5) {
+				int a = 0;
+			}
+
 			ascend_sort(simplex.begin(), simplex.end());
 
 			Vertex& hi = simplex.back();
@@ -83,9 +87,10 @@ struct NelderMead{
 			Vertex& nh = *(simplex.end() - 2);
 
 			// TODO: check tolerance, break
-			float a = fabsf(lo.f);
-			float b = fabsf(hi.f);
+			double a = glm::abs(lo.f);
+			double b = glm::abs(hi.f);
 			error = fabs(a - b);
+			// std::cout << "error = " << error << std::endl;
 			if (error < tolerance) {
 				x_opt = lo.x;
 				return { lo.x, error, iter };
@@ -95,7 +100,7 @@ struct NelderMead{
 			
 			// reflect
 			VecN x_r = VecN::lerp(hi.x, x_o, 2.0f);
-			float f_r = obj_func(x_r);
+			double f_r = obj_func(x_r);
 			if (f_r >= lo.f && f_r < nh.f) {
 				hi.x = x_r;
 				hi.f = f_r;
@@ -103,7 +108,7 @@ struct NelderMead{
 			else if (f_r < lo.f) {
 				// expansion
 				VecN x_e = VecN::lerp(x_o, x_r, 2.0f);
-				float f_e = obj_func(x_e);
+				double f_e = obj_func(x_e);
 				if (f_e < f_r) {
 					hi.x = x_e;
 					hi.f = f_e;
@@ -118,7 +123,7 @@ struct NelderMead{
 				assert(f_r >= nh.f);
 				if (f_r < hi.f) {
 					VecN x_c = VecN::lerp(x_o, x_r, 0.5f);
-					float f_c = obj_func(x_c);
+					double f_c = obj_func(x_c);
 					if (f_c < f_r) {
 						hi.x = x_c;
 						hi.f = f_c;
@@ -129,7 +134,7 @@ struct NelderMead{
 				}
 				else {
 					VecN x_c = VecN::lerp(x_o, hi.x, 0.5f);
-					float f_c = obj_func(x_c);
+					double f_c = obj_func(x_c);
 					if (f_c < hi.f) {
 						hi.x = x_c;
 						hi.f = f_c;

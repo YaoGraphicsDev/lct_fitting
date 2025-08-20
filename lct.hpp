@@ -9,19 +9,27 @@
 
 class LCT {
 public:
-	LCT(float m00, float m02, float m11, float m20, float m22, float albedo) {
-		m[0] = { m00, 0.0f, m20 };
-		m[1] = { 0.0f, m11, 0.0f };
-		m[2] = { m02, 0.0f, m22 };
+	LCT(glm::vec3 X, glm::vec3 Y, glm::vec3 Z,
+		float m11, float m13, float m22, float albedo) {
+
+		// scaling and shearing. column major
+		m[0] = { m11, 0.0f, 0.0f };
+		m[1] = { 0.0f, m22, 0.0f };
+		m[2] = { m13, 0.0f, 1.0f };
+		
+		m_params = { m11, m13, m22 };
+		
+		// rotation
+		rotation = glm::mat3(X, Y, Z);
+		m = rotation * m;
 
 		inv_m = glm::inverse(m);
-		
 		det_inv_m = 1.0f / glm::abs(glm::determinant(m));
-
 		_albedo = albedo;
 	};
 
-	LCT(Vector<5> ms, float albedo) : LCT(ms[0], ms[1], ms[2], ms[3], ms[4], albedo) {}
+	LCT(glm::mat3 R, Vector<float, 3> ms, float albedo) 
+		: LCT(R[0], R[1], R[2], ms[0], ms[1], ms[2], albedo) {}
 
 	struct EvalResult {
 		float pdf;
@@ -86,7 +94,9 @@ public:
 		return sum;
 	}
 
-private:
+// private:
+	Vector<float, 3> m_params;
+	glm::mat3 rotation;
 	glm::mat3 m;
 	glm::mat3 inv_m;
 	float det_inv_m;

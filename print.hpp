@@ -27,7 +27,7 @@ void print_lct(const std::string& name, LCT& lct, int n = 128) {
 	std::cout << "lct data written to " << name << std::endl;
 }
 
-void print_brdf(const std::string& name, BRDF& brdf, glm::vec3 v, int n = 128) {
+void print_ggx(const std::string& name, BRDF& brdf, glm::vec3 v, int n = 256) {
 	std::ofstream ofs;
 	ofs.open(name, std::fstream::out);
 	if (!ofs.is_open()) {
@@ -48,7 +48,7 @@ void print_brdf(const std::string& name, BRDF& brdf, glm::vec3 v, int n = 128) {
 		}
 	}
 
-	std::cout << "brdf data written to " << name << std::endl;
+	std::cout << "ggx brdf data written to " << name << std::endl;
 }
 
 //void print_diff(BRDF& brdf, LCT& lct, glm::vec3 v, int n = 128) {
