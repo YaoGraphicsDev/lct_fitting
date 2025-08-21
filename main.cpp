@@ -189,10 +189,9 @@ std::vector<LUT> gen_lut(TabRange rough_range, TabRange theta_mult_range) {
 				f_res.opti_m_params[1],
 				f_res.opti_m_params[2], 0.0f);
 			lut_b.at(t, r) = glm::vec4(
-				f_res.rotation[0][0],
-				f_res.rotation[2][0],
 				f_res.rotation[0][2],
-				f_res.rotation[2][2]);
+				f_res.rotation[2][2],
+				0.0f, 0.0f);
 
 			LCT lct(f_res.rotation, f_res.opti_m_params, a_ctx.albedo);
 			glm::mat3 m = lct.m;
