@@ -3,6 +3,7 @@ import numpy as np
 import pyvista as pv
 from charset_normalizer import from_path
 from scipy.interpolate import griddata
+import argparse
 
 
 def spherical_to_cartesian(theta, phi):
@@ -89,19 +90,68 @@ def add_pole_axis(plotter, center, length=2.5, color="red"):
     line = pv.Line(start, end)
     plotter.add_mesh(line, color=color, line_width=3)
 
-def main():
-    if len(sys.argv) < 2 or len(sys.argv) > 3:
-        print(f"Usage: {sys.argv[0]} datafile1 [datafile2]")
-        sys.exit(1)
 
-    file1 = sys.argv[1]
+def parse_view_direction(view_str):
+    """Parse view direction string like '1.0,0.0,0.0' into a camera position."""
+    try:
+        # Parse the comma-separated values
+        view_components = [float(x.strip()) for x in view_str.split(',')]
+        if len(view_components) != 3:
+            raise ValueError("View direction must have exactly 3 components")
+        
+        # Normalize the view direction vector
+        view_vector = np.array(view_components)
+        camera_position = view_vector
+        
+        # Set up camera position (position, focal point, up vector)
+        # For simplicity, we'll use a default up vector of (0, 0, 1)
+        # unless the view direction is exactly vertical
+        if np.allclose(view_vector, [0, 0, 1]) or np.allclose(view_vector, [0, 0, -1]):
+            up_vector = [0, 1, 0]  # Use y-axis as up if looking straight up/down
+        else:
+            up_vector = [0, 0, 1]  # Default up vector is z-axis
+        
+        return [camera_position.tolist(), [0, 0, 0], up_vector]
+    
+    except ValueError as e:
+        raise ValueError(f"Invalid view direction format: {e}")
+
+
+def main():
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Plot hemispherical distributions')
+    parser.add_argument('datafiles', nargs='+', help='Input data file(s)')
+    parser.add_argument('-o', '--output', help='Output image file for headless mode')
+    parser.add_argument('-v', '--view', help='Place camera at "x,y,z", looking at 0,0,0 point')
+    args = parser.parse_args()
+    
+    if len(args.datafiles) > 2:
+        print("Error: Maximum of 2 data files supported")
+        sys.exit(1)
+    
+    # Parse view direction if provided
+    if args.view:
+        try:
+            camera_position = parse_view_direction(args.view)
+        except ValueError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+    else:
+        # Default camera position (current hardcoded value)
+        camera_position = [(-10, 0, 5), (0, 0, 0), (0, 0, 1)]
+    
+    file1 = args.datafiles[0]
     data1 = load_data(file1)
     sphere1 = make_colored_sphere(data1)
 
-    plotter = pv.Plotter()
+    # Set up headless mode if output file is specified
+    if args.output:
+        plotter = pv.Plotter(off_screen=True)
+    else:
+        plotter = pv.Plotter()
 
-    if len(sys.argv) == 3:
-        file2 = sys.argv[2]
+    if len(args.datafiles) == 2:
+        file2 = args.datafiles[1]
         data2 = load_data(file2)
         sphere2 = make_colored_sphere(data2)
 
@@ -130,14 +180,14 @@ def main():
     plotter.add_mesh(plane, color='lightgray', opacity=0.3)
 
     # Add pole axis
-    if len(sys.argv) == 3:
+    if len(args.datafiles) == 2:
         add_pole_axis(plotter, [0, -1.5, 0])
         add_pole_axis(plotter, [0,  1.5, 0])
     else:
         add_pole_axis(plotter, [0, 0, 0])
 
     plotter.add_axes()
-    plotter.camera_position = [(-10, 0, 5), (0, 0, 0), (0, 0, 1)]
+    plotter.camera_position = camera_position
 
     # Orthogonal camera
     plotter.camera.parallel_projection = True
@@ -152,7 +202,13 @@ def main():
         always_visible=True
     )
 
-    plotter.show()
+    if args.output:
+        # Save to file in headless mode
+        plotter.screenshot(args.output)
+        print(f"Plot saved to {args.output}")
+    else:
+        # Show interactive window
+        plotter.show()
 
 
 if __name__ == "__main__":

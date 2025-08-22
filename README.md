@@ -3,116 +3,7 @@ A small program that fits Linearly Transformed Cosine parameters to GGX BRDF. La
 Also accounts for implementation caveats mentioned in the lecture [Real-Time Area Lighting:
 a Journey from Research to Production](https://advances.realtimerendering.com/s2016/s2016_ltc_rnd.pdf) by Stephen Hill.
 
-The goal is to generate multiple textures that store tabulated parameters that represent $\mathbf{M}$, parameterized by viewing angle $\theta_v$ and roughness $\sqrt{\alpha}$
-
-$$
-\mathbf{M} = \mathbf{B}\mathbf{m}
-$$
-
-$\mathbf{m}$ is a transformation that scales the cosine lobe in $x$ and $y$ direction, in the meantime shearing $x$ with respect to $z$. Jacobian of this transformation will ensure $z$ component being scaled accordingly to keep the transformed distribution normalized.
-
-$$
-\mathbf{m} =
-\begin{bmatrix}
-m_{11} & 0 & m_{13} \\
-0 & m_{22} & 0 \\
-0 & 0 & 1
-\end{bmatrix}
-$$
-
-$\mathbf{B}$ is a rotation matrix around the $+y$ axis:
-
-$$
-\mathbf{B} = 
-\begin{bmatrix}
-\cos\bar{\theta_i} & 0 & -\sin\bar{\theta_i} \\
-0 & 1 & 0 \\
-\sin\bar{\theta_i} & 0 & \cos\bar{\theta_i}
-\end{bmatrix}
-$$
-
-$\theta_i$ is the polar angle of weighted average incident direction $\bar{\omega_i}$ given an outgoing direction $\omega_o$:
-
-$$
-\bar{\omega_i} = \int_{\Omega} f_r(\omega_i, \omega_o)\cos\theta_i\omega_id\omega_i
-$$
-
-Notice the similarity between the above weighted average and the definition of albedo:
-
-$$
-Albedo = \int_{\Omega} f_r(\omega_i, \omega_o)\cos\theta_id\omega_i
-$$
-
-Since $\bar{\omega_i}$ is typically derived from a known BRDF (in our case, GGX), only the three scaling and shearing parameters of the matrix $\mathbf{m}$ require fitting. This separation of rotation from shearing-scaling factors, as opposed to directly fitting all five parameters of $\mathbf{M}$, reduces the likelihood of converging to a local minimum. Consequently, it yields more consistent results across adjacent entries in the resulting LUTs.
-
-Expanded form of $\mathbf{M}$:
-
-$$
-\mathbf{M}
- = \begin{bmatrix}
-m_{11}\cos\bar{\theta_i} & 0 & m_{13}\cos\bar{\theta_i}-\sin\bar{\theta_i} \\
-0 & m_{22} & 0 \\
-m_{11}\sin\bar{\theta_i} & 0 & m_{13}\sin\bar{\theta_i}+\cos\bar{\theta_i}
-\end{bmatrix}
- = \begin{bmatrix}
-a & 0 & b \\
-0 & c & 0 \\
-d & 0 & e
-\end{bmatrix}
-$$
-
-The LTC paper divides $\mathbf{M}$ by its bottom right component $e$ to save one tabulated parameter. But in practice it is seen as a "false economy" because a second texture storing albedo has to be introduced regardless. We compute and tabulate this "normalized" matrix only to compare against the results given by the author.
-
-$$
-\mathbf{\hat{M}}
- = \frac{1}{e}\mathbf{M}
- = \begin{bmatrix}
-\dfrac{a}{e} & 0 & \dfrac{b}{e} \\[8pt]
-0 & \dfrac{c}{e} & 0 \\[8pt]
-\dfrac{d}{e} & 0 & 1 \\[8pt]
-\end{bmatrix}
- = \begin{bmatrix}
-\hat{a} & 0 & \hat{b} \\[8pt]
-0 & \hat{c} & 0 \\[8pt]
-\hat{d} & 0 & 1 \\[8pt]
-\end{bmatrix}
-$$
-
-It is also convenient to write paramters of $\mathbf{M^{-1}}$ and $\mathbf{\hat{M}^{-1}}$ to an LUT for later use in real-time polygonal lighting.
-
-$$
-\mathbf{M^{-1}}
- = \begin{bmatrix}
-\dfrac{e}{\Delta} & 0 & -\dfrac{b}{\Delta} \\[8pt]
-0 & \dfrac{1}{c} & 0 \\[8pt]
--\dfrac{d}{\Delta} & 0 & \dfrac{a}{\Delta}\\[8pt]
-\end{bmatrix}
-$$
-
-where $\Delta = \det{\mathbf{M}} = ae - bd$.
-
-Similarly, introduce $\hat{\Delta} = \det{\mathbf{\hat{M}}} = \hat{a} - \hat{b}\hat{d}$, we can write:
-
-$$
-\mathbf{\hat{M}^{-1}}
-= \begin{bmatrix}
-\dfrac{1}{\hat{\Delta}} & 0 & -\dfrac{\hat{b}}{\hat{\Delta}} \\[8pt]
-0 & \dfrac{1}{\hat{c}} & 0 \\[8pt]
--\dfrac{\hat{d}}{\hat{\Delta}} & 0 & \dfrac{\hat{a}}{\hat{\Delta}}\\[8pt]
-\end{bmatrix}
-= \frac{1}{\hat{\Delta}}\begin{bmatrix}
-1 & 0 & -\hat{b} \\[8pt]
-0 & \dfrac{\hat{\Delta}}{\hat{c}} & 0 \\[8pt]
--\hat{d} & 0 & \hat{a}\\[8pt]
-\end{bmatrix}
-$$
-
-
-## $x$ Shear Versus $z$ Shear
-TODO
-
-## Preconditioning Roughness and Viewing angle
-TODO
+For implementation details checkout [this](https://yaographicsdev.github.io/2025/08/21/lct-fit.html) blog post.
 
 ## Input Parameters
 
@@ -166,11 +57,13 @@ OPTIONS:
                               name of output data file
 ```
 
-## Generate M Matrix Parameter LUTs
-
-subcommand `gen_luts`:
+## Generate $\mathbf{M}$ Parameter LUTs
 
 ```
+LCTFit.exe gen_luts [OPTIONS]
+
+
+OPTIONS:
   -h,     --help              Print this help message and exit
   -t,     --theta-multiplier [INT,FLOAT,FLOAT] [64, 0.0, 0.99]
                               range of theta multiplier: <resolution> <min> <max>
@@ -189,5 +82,87 @@ Data stored in each channel of each texture:
 |`lut_inv_0.exr`|$\mathbf{M^{-1}}$|$\dfrac{e}{\Delta}$|$-\dfrac{b}{\Delta}$|$\dfrac{1}{c}$|
 |`lut_inv_1.exr`|$\mathbf{M^{-1}}$|$-\dfrac{d}{\Delta}$|$\dfrac{a}{\Delta}$|$Albedo$|
 |`lut_norm_inv.exr`|$\mathbf{\hat{M}^{-1}}$|$\hat{a}$|$-\hat{b}$|$\dfrac{\hat{\Delta}}{\hat{c}}$|$-\hat{d}$|
+
+Refer to the blog post for detailed descriptions of these parameters.
+
+## Compute From Sampled $\mathbf{M}$ Parameter
+
+```
+LCTFit.exe sample_luts -h                                        sample textures containing M parameters
+
+
+C:\Users\Liyao\Sources\lct_fitting\build\Release\LCTFit.exe sample_luts [OPTIONS] input_0 input_1
+
+
+POSITIONALS:
+  input_0 TEXT:FILE REQUIRED  LUT texture containing first 3 parameters of matrix M
+  input_1 TEXT:FILE REQUIRED  LUT texture containing last 2 parameters of matrix M and albedo
+
+OPTIONS:
+  -h,     --help              Print this help message and exit
+  -r,     --res INT [256]     sampling resolution of theta and phi
+  -t,     --theta-multiplier FLOAT REQUIRED
+                              theta multiplier. Viewing angle theta_v = multiplier * 0.5 * pi
+  -u,     --roughness FLOAT REQUIRED
+                              roughness
+  -l,     --lct-filename TEXT [lct.dat]
+                              name of LCT data file
+```
+
+## Python Script for Plotting Hemispherical Distribution
+
+```
+python3.7.exe .\python\plot_sphere.py -h
+usage: plot_sphere.py [-h] [-o OUTPUT] [-v VIEW] datafiles [datafiles ...]
+
+Plot hemispherical distributions
+
+positional arguments:
+  datafiles             Input data file(s)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        Output image file for headless mode
+  -v VIEW, --view VIEW  Place camera at "x,y,z", looking at 0,0,0 point
+```
+
+## Use Case Examples
+
+Generate $\mathbf{M}$ LUT textures with default parameters:
+```
+LCTFit.exe gen_luts
+```
+Generated textures will be saved in `.\out` directory
+
+Sample $\mathbf{M}$ parameters LUT at (0.24, 0.45), print corresponding LCT BRDF distribution to data file `.\out\lct.dat`
+
+```
+LCTFit.exe sample_luts -t 0.45 -u 0.24 .\out\lut_bm_0.exr .\out\lut_bm_1.exr
+``` 
+
+Print reference GGX BRDF distribution to data file `.\out\ggx.dat`:
+
+```
+LCTFit.exe dist-ggx -t 0.45 -u 0.24
+```
+
+Plot GGX and LCT distributions on 2 separate spheres side by side:
+
+```
+python3.7.exe plot_sphere.py .\out\ggx.dat .\out\lct.dat
+```
+
+This command will show an interactive window. Drag around to visually inspect the two distributions from any direction.
+
+If you want to plot these distributions headlessly and save them as an image directly, run
+
+```
+ python3.7.exe plot_sphere.py -o distributions.png -v="-10,5,5" .\out\ggx.dat .\out\lct.dat
+```
+
+This command will plot the distributions, place the camera at (-10, 5, 5) and then take a screenshot of the plot and save the screenshot under the name `distributions.png`.
+
+![Logo](./images/distributions.png)
 
 

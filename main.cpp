@@ -266,7 +266,7 @@ int main(int argc, char** argv) {
 	DistLCTParams lct_params;
 	dist_lct_cmd->add_option("-r,--res", lct_params.resolution, "sampling resolution of theta and phi")
 		->default_val(256);
-	dist_lct_cmd->add_option("-m,--m-params", lct_params.m_params, "Matrix M parameters. x-scale, x-z shear, y scale")
+	dist_lct_cmd->add_option("-m,--m-params", lct_params.m_params, "Matrix m parameters. x-scale, x-z shear, y scale")
 		->required()
 		->expected(3);
 	dist_lct_cmd->add_option("-y,--y-angle", lct_params.y_angle, "Angle of rotation around +y axis, in degrees")
@@ -360,7 +360,7 @@ int main(int argc, char** argv) {
 	});
 
 	// subcommand: generate LCT parameter LUTs
-	auto gen_luts_cmd = app.add_subcommand("gen_luts", "write M matrix and albedo to textures");
+	auto gen_luts_cmd = app.add_subcommand("gen_luts", "write matrix M and albedo to textures");
 	std::tuple<int, float, float> theta_range_tuple{ 64, 0.0f, 0.99f };
 	gen_luts_cmd->add_option("-t,--theta-multiplier",
 		theta_range_tuple,
@@ -387,6 +387,39 @@ int main(int argc, char** argv) {
 		luts[4].write_to_exr("./out/lut_inv_0.exr");
 		luts[5].write_to_exr("./out/lut_inv_1.exr");
 		luts[6].write_to_exr("./out/lut_norm_inv.exr");
+	});
+
+	// subcommand: sample LCT parameter LUTs
+	auto sample_luts_cmd = app.add_subcommand("sample_luts", "sample textures containing M parameters");
+	sample_luts_cmd->add_option("-r,--res", d_params.resolution, "sampling resolution of theta and phi")
+		->default_val(256);
+	sample_luts_cmd->add_option("-t,--theta-multiplier", d_params.theta_mult, "theta multiplier. Viewing angle theta_v = multiplier * 0.5 * pi")
+		->required();
+	sample_luts_cmd->add_option("-u,--roughness", d_params.roughness, "roughness")
+		->required();
+	sample_luts_cmd->add_option("-l,--lct-filename", d_params.lct_filename, "name of LCT data file")
+		->default_val("lct.dat");
+
+	std::string filename_0;
+	std::string filename_1;
+	sample_luts_cmd->add_option("input_0", filename_0, "LUT texture containing first 3 parameters of matrix M")
+		->required()
+		->check(CLI::ExistingFile);
+	sample_luts_cmd->add_option("input_1", filename_1, "LUT texture containing last 2 parameters of matrix M and albedo")
+		->required()
+		->check(CLI::ExistingFile);
+
+	sample_luts_cmd->callback([&]() {
+		LUT lut_bm_0(filename_0);
+		LUT lut_bm_1(filename_1);
+
+		float r = d_params.roughness;  // roughness
+		float t = d_params.theta_mult; // theta multiplier
+		glm::vec4 p0 = lut_bm_0.sample(glm::vec2(r, t));
+		glm::vec4 p1 = lut_bm_1.sample(glm::vec2(r, t));
+		LCT lct({ p0[0], p0[1], p0[2], p1[0], p1[1] }, p1[2]);
+
+		print_lct(out_dir + "/" + d_params.lct_filename, lct, d_params.resolution);
 	});
 
 	app.require_subcommand(1);  // At least 1 subcommand required

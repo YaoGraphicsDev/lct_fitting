@@ -31,6 +31,20 @@ public:
 	LCT(glm::mat3 R, Vector<float, 3> ms, float albedo) 
 		: LCT(R[0], R[1], R[2], ms[0], ms[1], ms[2], albedo) {}
 
+	// This ctor does not properly set m_params and rotation
+	LCT(Vector<float, 5> p, float albedo) {
+		m[0] = { p[0], 0.0f, p[3]};
+		m[1] = { 0.0f, p[2], 0.0f};
+		m[2] = { p[1], 0.0f, p[4]};
+
+		m_params = { 1.0f, 0.0f, 1.0f };
+		rotation = glm::mat3(1.0f);
+
+		inv_m = glm::inverse(m);
+		det_inv_m = 1.0f / glm::abs(glm::determinant(m));
+		_albedo = albedo;
+	}
+
 	struct EvalResult {
 		float pdf;
 		float brdfxcos_l;
