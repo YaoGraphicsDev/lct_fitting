@@ -135,16 +135,16 @@ LCTFit.exe gen_luts
 ```
 Generated textures will be saved in `.\out` directory.
 
-Sample $\mathbf{M}$ parameters LUT at (0.24, 0.45), print corresponding LCT BRDF distribution to data file `.\out\lct.dat`
+Sample $\mathbf{M}$ parameters LUT at (0.54, 0.85), print corresponding LCT BRDF distribution to data file `.\out\lct.dat`
 
 ```
-LCTFit.exe sample_luts -t 0.45 -u 0.24 .\out\lut_bm_0.exr .\out\lut_bm_1.exr
+LCTFit.exe sample_luts -t 0.85 -u 0.54 .\out\lut_bm_0.exr .\out\lut_bm_1.exr
 ``` 
 
 Print reference GGX BRDF distribution to data file `.\out\ggx.dat`:
 
 ```
-LCTFit.exe dist-ggx -t 0.45 -u 0.24
+LCTFit.exe dist-ggx -t 0.85 -u 0.54
 ```
 
 Plot GGX and LCT distributions on 2 separate spheres side by side:
