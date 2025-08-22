@@ -133,7 +133,7 @@ Generate $\mathbf{M}$ LUT textures with default parameters:
 ```
 LCTFit.exe gen_luts
 ```
-Generated textures will be saved in `.\out` directory
+Generated textures will be saved in `.\out` directory.
 
 Sample $\mathbf{M}$ parameters LUT at (0.24, 0.45), print corresponding LCT BRDF distribution to data file `.\out\lct.dat`
 
@@ -163,6 +163,6 @@ If you want to plot these distributions headlessly and save them as an image dir
 
 This command will plot the distributions, place the camera at (-10, 5, 5) and then take a screenshot of the plot and save the screenshot under the name `distributions.png`.
 
-![Logo](./images/distributions.png)
+![distributions](./images/distributions.png)
 
 
