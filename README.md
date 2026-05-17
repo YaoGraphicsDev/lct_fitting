@@ -91,7 +91,7 @@ Refer to the blog post for detailed descriptions of these parameters.
 LCTFit.exe sample_luts -h                                        sample textures containing M parameters
 
 
-C:\Users\Liyao\Sources\lct_fitting\build\Release\LCTFit.exe sample_luts [OPTIONS] input_0 input_1
+LCTFit.exe sample_luts [OPTIONS] input_0 input_1
 
 
 POSITIONALS:
