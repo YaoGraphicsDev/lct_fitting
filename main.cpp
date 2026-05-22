@@ -146,10 +146,8 @@ std::vector<LUT> gen_lut(TabRange rough_range, TabRange theta_mult_range) {
 	LUT lut_bm_0(rough_range.resolution, theta_mult_range.resolution);
 	LUT lut_bm_1(rough_range.resolution, theta_mult_range.resolution);
 
-	LUT lut_inv_0(rough_range.resolution, theta_mult_range.resolution);
-	LUT lut_inv_1(rough_range.resolution, theta_mult_range.resolution);
-
-	LUT lut_norm_inv(rough_range.resolution, theta_mult_range.resolution);
+	LUT lut_rescaled_inv_0(rough_range.resolution, theta_mult_range.resolution);
+	LUT lut_rescaled_inv_1(rough_range.resolution, theta_mult_range.resolution);
 
 	Vector<float, 3> start_m_params;
 	for (int r = rough_range.resolution - 1; r >= 0; --r) {
@@ -157,12 +155,15 @@ std::vector<LUT> gen_lut(TabRange rough_range, TabRange theta_mult_range) {
 		float alpha = roughness * roughness;
 		BRDF brdf(alpha);
 		for (int t = 0; t < theta_mult_range.resolution; ++t) {
-			float theta_v_mult = glm::clamp((float)t / (theta_mult_range.resolution - 1), theta_mult_range.min, theta_mult_range.max);
-			float theta_v = theta_v_mult * glm::half_pi<float>(); // theta = 0.5pi is a singularity
-			glm::vec3 v = UVA::spherical(theta_v, 0.0f);
+			float sqrt_one_minus_cos = glm::clamp((float)t / (theta_mult_range.resolution - 1), theta_mult_range.min, theta_mult_range.max);
+			// float theta_v = theta_v_mult * glm::half_pi<float>(); // theta = 0.5pi is a singularity
+			float cos_theta = (1 - sqrt_one_minus_cos * sqrt_one_minus_cos);
+			float sin_theta = glm::sqrt(1 - cos_theta * cos_theta);
+			// glm::vec3 v = UVA::spherical(theta_v, 0.0f);
+			glm::vec3 v = glm::vec3(sin_theta, 0.0f, cos_theta);
 			BRDF::AlbedoContext a_ctx = brdf.albedo_2(v);
 
-			std::cout << "roughness = " << roughness << ", theta = " << theta_v_mult << " * half pi" << std::endl;
+			std::cout << "roughness = " << roughness << ", sqrt(1-cos(theta)) = " << sqrt_one_minus_cos << std::endl;
 
 			if (t == 0) {
 				if (r == rough_range.resolution - 1) {
@@ -198,20 +199,30 @@ std::vector<LUT> gen_lut(TabRange rough_range, TabRange theta_mult_range) {
 			lut_bm_0.at(t, r) = glm::vec4(m[0][0], m[2][0], m[1][1], 0.0f);
 			lut_bm_1.at(t, r) = glm::vec4(m[0][2], m[2][2], a_ctx.albedo, 0.0f);
 			
-			glm::mat3 m_inv = glm::inverse(m);
-			lut_inv_0.at(t, r) = glm::vec4(m_inv[0][0], m_inv[2][0], m_inv[1][1], 0.0f);
-			lut_inv_1.at(t, r) = glm::vec4(m_inv[0][2], m_inv[2][2], a_ctx.albedo, 0.0f);
+			float a = m[0][0];
+			float b = m[0][2];
+			float c = m[1][1];
+			float d = m[2][0];
+			float e = m[2][2];
 
-			glm::mat3 m_norm = m / m[2][2];
-			float a = m_norm[0][0];
-			float b = m_norm[0][2];
-			float c = m_norm[1][1];
-			float d = m_norm[2][0];
-			lut_norm_inv.at(t, r) = glm::vec4(a, -b, (a - b * d) / c, -d);
+			// rescaled inverse of m:
+			// a 0 b   inverse  c*e     0     -b*c
+			// 0 c 0     ==>     0  a*e - b*d   0
+			// d 0 e           -c*d     0      a*c
+
+			// this is called rescaled inverse
+			float t0 = c * e;
+			float t1 = -b * c;
+			float t2 = a * e - b * d;
+			float t3 = -c * d;
+			float t4 = a * c;
+
+			lut_rescaled_inv_0.at(t, r) = glm::vec4(t0, t1, t2, t3);
+			lut_rescaled_inv_1.at(t, r) = glm::vec4(t4, a_ctx.albedo, a_ctx.fresnel_albedo, 0.0f);
 		}
 	}
 
-	return { lut_m, lut_b, lut_bm_0, lut_bm_1, lut_inv_0, lut_inv_1, lut_norm_inv };
+	return { lut_m, lut_b, lut_bm_0, lut_bm_1, lut_rescaled_inv_0, lut_rescaled_inv_1};
 }
 
 int main(int argc, char** argv) {
@@ -384,9 +395,8 @@ int main(int argc, char** argv) {
 		luts[1].write_to_exr("./out/lut_b.exr");
 		luts[2].write_to_exr("./out/lut_bm_0.exr");
 		luts[3].write_to_exr("./out/lut_bm_1.exr");
-		luts[4].write_to_exr("./out/lut_inv_0.exr");
-		luts[5].write_to_exr("./out/lut_inv_1.exr");
-		luts[6].write_to_exr("./out/lut_norm_inv.exr");
+		luts[4].write_to_exr("./out/lut_rescaled_inv_0.exr");
+		luts[5].write_to_exr("./out/lut_rescaled_inv_1.exr");
 	});
 
 	// subcommand: sample LCT parameter LUTs

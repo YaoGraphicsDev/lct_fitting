@@ -156,9 +156,11 @@ public:
 	struct AlbedoContext {
 		float albedo;
 		glm::vec3 l_avg;
+		float fresnel_albedo;
 	};
 	AlbedoContext albedo_2(glm::vec3 v, int n = 64) {
 		float sum = 0.0f;
+		float fresnel_sum = 0.0f;
 		glm::vec3 dir(0.0f);
 
 		for (int i = 0; i < n; ++i) {
@@ -178,7 +180,10 @@ public:
 				assert(e_result.brdfxcos_l >= 0.0f);
 
 				sum += e_result.brdfxcos_l / e_result.pdf;
-				dir += e_result.brdfxcos_l * s_result.l / e_result.pdf;
+				dir += s_result.l * e_result.brdfxcos_l / e_result.pdf;
+				glm::vec3 h = glm::normalize(v + s_result.l);
+				float partial_fresnel = pow(1.0f - glm::max(dot(v, h), 0.0f), 5.0f);
+				fresnel_sum += partial_fresnel * e_result.brdfxcos_l / e_result.pdf;
 			}
 		}
 
@@ -192,8 +197,8 @@ public:
 			dir = dir - glm::dot(n_vz, dir) * n_vz;
 		}
 		
-		return { sum / (float)(n * n), glm::normalize(dir) };
+		return { sum / (float)(n * n), glm::normalize(dir), fresnel_sum / float(n * n), };
 	}
-
+	
 	GGXDistribution ggx;
 };
